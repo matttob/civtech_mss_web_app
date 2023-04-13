@@ -12,7 +12,7 @@ import plotly.express as px
 import pandas as pd
 from osgeo import gdal
 import matplotlib.pyplot as plt
-
+from shapely.geometry import Polygon
 
 
 import rasterio
@@ -26,17 +26,6 @@ import base64
 
 
 
-## shape file testing 
-
-import json
-import geopandas as gpd
-import pandas as pd
-shapefile = "/Users/matthewtoberman/Downloads/pmf_consultation_pmfs_management_status/pmf_consultation_pmfs_management_statusPoint.shp"
-gdf = gpd.read_file(shapefile)
-geojson_mss=json.loads(gdf.to_json())
-
-
-
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -46,11 +35,11 @@ logo_image_path = 'assets/Logo2.png'
 
 
 
-# Using base64 encoding and decoding
-def b64_image(image_filename):
-    with open(image_filename, 'rb') as f:
-        image = f.read()
-    return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
+# # Using base64 encoding and decoding
+# def b64_image(image_filename):
+#     with open(image_filename, 'rb') as f:
+#         image = f.read()
+#     return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
 
 
 # define functions external to app call backs
@@ -69,12 +58,23 @@ def get_centre_geotiff(url):
     return centre_coords
 
 
+
+def whole_geotiff_polygon(url):
+    bounded_data = httpx.get(
+    f"{titiler_endpoint}/cog/bounds",
+    params = {
+        "url": url,
+        }
+    ).json()
+    entire_geotiff_poly = bounded_data
+    return entire_geotiff_poly
+
+
 # Enter tiler details
 titiler_endpoint= "https://os8ci3nx02.execute-api.eu-west-2.amazonaws.com"  # titiler docker image running on local .
 
 
 # survey locations
-
 survey_location_list = ['none','Ardmucknish Bay','Loch Creran T1']
 
 
@@ -88,7 +88,9 @@ ard_bay_request = httpx.get(
     }
 ).json()
 
-ard_bay_center_coords  = get_centre_geotiff("https://tiletesting.s3.eu-west-2.amazonaws.com/COG_ROV_20_10_2_5mmPix_wgs84_test.tif")
+
+ard_bay_center_coords  = get_centre_geotiff(ard_bay_url)
+ard_bay_whole_geotiff_polygon = whole_geotiff_polygon(ard_bay_url)
 ard_bay_marker = dl.Marker(id='test', position=(ard_bay_center_coords[1], ard_bay_center_coords[0]))
 
 pink_t0_url = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_CRACK_ID_pink_downsample.tif"
@@ -99,35 +101,6 @@ request_pink_t0= httpx.get(
         "rescale": f"{0},{255}",
     }
 ).json()
-
-pink_t1_url = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_CRACK_ID_pink_downsample_increase_10px.tif"
-request_pink_t1 = httpx.get(
-    f"{titiler_endpoint}/cog/tilejson.json",
-    params = {
-        "url": pink_t1_url,
-        "rescale": f"{0},{255}",
-    }
-).json()
-
-pink_t2_url = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_CRACK_ID_pink_downsample_increase_20px.tif"
-request_pink_t2 = httpx.get(
-    f"{titiler_endpoint}/cog/tilejson.json",
-    params = {
-        "url": pink_t2_url,
-        "rescale": f"{0},{255}",
-    }
-).json()
-
-url_3 = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_CRACK_ID_blue_flipped_downsample.tif"
-request_3 = httpx.get(
-    f"{titiler_endpoint}/cog/tilejson.json",
-    params = {
-        "url": url_3,
-        "rescale": f"{0},{255}",
-        
-    }
-).json()
-
 
 # Extract min and max values of the COG , this is used to rescale the COG
 bathy_dem_url = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_CRACK_DEM.tif"
@@ -153,11 +126,27 @@ request_bathy_dem_url = httpx.get(
 
 
 
-date_slider_file_dict = {2020 : '/Users/matthewtoberman/Downloads/CRACK_ID_pink_downsample.tif', 
-                            2021 : '/Users/matthewtoberman/Downloads/CRACK_ID_pink_downsample_increase_10px.tif',
-                            2022 : '/Users/matthewtoberman/Downloads/CRACK_ID_pink_downsample_increase_20px.tif' }
 
 
+ard_bay_diver_url = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_crack_diverModel_Orthomosaic.tif"
+ard_bay_diver_request = httpx.get(
+    f"{titiler_endpoint}/cog/tilejson.json",
+    params = {
+        "url": ard_bay_diver_url,
+        "rescale": f"{0},{255}",
+    }
+).json()
+
+
+
+ard_bay_diver_pink_t0_url = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_crack_species_only_Orthomosaic_downsample.tif"
+ard_bay_diver_request_pink_t0= httpx.get(
+    f"{titiler_endpoint}/cog/tilejson.json",
+    params = {
+        "url": ard_bay_diver_pink_t0_url,
+        "rescale": f"{0},{255}",
+    }
+).json()
 
 
 
@@ -175,6 +164,14 @@ Creran_15_03_23_T1_marker = dl.Marker(id='Creran_15_03_23_T1_marker', position=(
 
 
 
+
+
+date_slider_file_dict = {2021 : '/Users/matthewtoberman/Downloads/CRACK_ID_pink_downsample.tif', 
+                            2022 : '/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/data/crack_species_only_Orthomosaic_downsample.tif'}
+
+
+
+
 species_df_initial = pd.DataFrame(['pink'],columns=['Species'])
 species_df_initial['Pixel Count'] = 0
 species_df_initial['coverage_sqm']= 0
@@ -183,12 +180,10 @@ species_df_initial.loc[len(species_df_initial)] = ['none',1,1]
 
 
 species_time_series_df_initial_counts = [0]
-species_time_series_df_initial_years = [2020,2021,2022]
+species_time_series_df_initial_years = [2021,2022]
 
 species_time_series_df_initial = pd.DataFrame(list(zip(species_time_series_df_initial_years, species_time_series_df_initial_counts)),
                columns =['year', 'pixel_area_count'])
-
-
 
 species_pie = px.pie(species_df_initial,values='Pixel Count', names='Species', color='Species',color_discrete_map={'pink':'DeepPink',
                                 'blue':'Cyan',
@@ -267,12 +262,11 @@ dl.Map(style={'width': '800px', 'height': '400px','margin': '30px'},
                    #COG fed into Tilelayer using TiTiler url (taken from r["tiles"][0])
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_3["tiles"][0], opacity=0.4,id="species_blue")),name="Species_blue",checked=True),
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
                    dl.LayerGroup(id="layer"),
                    info]),
                 dl.FeatureGroup([dl.EditControl(id="edit_control")]),
-                dl.GeoJSON(data=geojson_mss,options={'style':{"color":"red"}})]),
+                ]),
 html.Div(children=[
                 html.Label(['Select Survey:'], style={'font-weight': 'bold', "text-align": "center"}),
                 dcc.Dropdown(id = 'survery_select',
@@ -283,12 +277,11 @@ html.Div(children=[
 html.Div([
 dcc.RangeSlider(
 id='date_select_slide',
-min=2020,
+min=2021,
 max=2022,
-value=[2020,2020],
+value=[2021,2021],
 step=1,
 marks={
-        2020: '2020',
         2021: '2021',
         2022: '2022'
     },
@@ -303,6 +296,7 @@ dcc.Store(id = 'intermediate_mapview')
 ])
 
 
+
 @app.callback(Output("species_pie",component_property='figure'),
               Output("species_bar",component_property='figure'),
               Output("map", "children"),
@@ -312,6 +306,7 @@ dcc.Store(id = 'intermediate_mapview')
               Output('intermediate_mapview','data'),
               Output("survery_select", component_property='value'),
               Output("map", "viewport"),
+              Output("info",component_property='children'),
               Input("date_select_slide","value"),
               Input('intermediate_slider','data'),
               Input('intermediate_polygon','data'),
@@ -323,29 +318,108 @@ dcc.Store(id = 'intermediate_mapview')
 
 def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediate_polygon,polygon_json,map_view,survey_name,intermediate_mapview):
 
-    # print(f'current = {map_view}')
+
+    # update info box with file name used for slider values
+    info_out = str(date_slider_file_dict[slider_values[0]].split('/')[-1])
+
+
+
+
+
+   
+    if map_view is None:
+          map_view = {'center': [56.58215811323581, -5.701866236751068], 'zoom': 9}
     # if type(map_view) != 'NoneType' and type(intermediate_mapview ) != 'NoneType' :
     #         intermediate_mapview = start_mapview
     # #         current_zoom = map_view['zoom']
     #         print(f'intermediate = {intermediate_mapview}')
+
+
+
+    if survey_name == 'Ardmucknish Bay':
+        map_view['center'] =  [ard_bay_center_coords[1],ard_bay_center_coords[0]]
+        map_view['zoom'] = 20
+
+
+
+ 
+
+
+        if polygon_json is None:
+            print('test_no_user_poly')
+            entire_ortho_poly= Polygon([[whole_geotiff_polygon(ard_bay_url)['bounds'][0],whole_geotiff_polygon(ard_bay_url)['bounds'][1]],
+                      [whole_geotiff_polygon(ard_bay_url)['bounds'][2],whole_geotiff_polygon(ard_bay_url)['bounds'][1]],
+                      [whole_geotiff_polygon(ard_bay_url)['bounds'][2],whole_geotiff_polygon(ard_bay_url)['bounds'][3]],
+                      [whole_geotiff_polygon(ard_bay_url)['bounds'][0],whole_geotiff_polygon(ard_bay_url)['bounds'][3]]])
+                  
+            with rasterio.open(date_slider_file_dict[slider_values[0]]) as src:
+                pink_out_image, out_transform = rasterio.mask.mask(src,[entire_ortho_poly], crop=True,pad=True,nodata=99)
+
+            pink_non_zero_alpha_band_count = ((pink_out_image[3,:,:] ==  255)).sum()
+            print(pink_non_zero_alpha_band_count)
+            # count no species coloured pixels
+            no_species_count = ((pink_out_image[3,:,:] != 99)).sum()-((pink_out_image[3,:,:] ==  255)).sum()
+
+            # create data frame for species plots
+            species_df = pd.DataFrame(['pink'],columns=['Species'])
+            species_df['Pixel Count'] = pink_non_zero_alpha_band_count
+            species_df['coverage_sqm']= pink_non_zero_alpha_band_count*pixel_area
+            species_df.loc[len(species_df)] = ['blue',0,0] 
+            species_df.loc[len(species_df)] = ['none',no_species_count,0] 
+
+            species_pie = px.pie(species_df,values='Pixel Count', names='Species', color='Species',color_discrete_map={'pink':'DeepPink',
+                                        'blue':'Cyan',
+                                        'none':'DimGray'})
+
+            species_bar = px.bar(species_df[species_df['Species']!= 'none'],x='Species',y='coverage_sqm', color='Species',
+                                    color_discrete_map={'pink':'DeepPink','blue':'Cyan'},
+                                    labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (m\u00b2) '},
+                                    range_y=[0, 8])
+            species_bar.update_layout(
+            showlegend=False,
+            xaxis = dict(
+             showgrid=False),
+            yaxis=dict(showgrid=False))
+
+            species_time_series_plot = px.line(species_time_series_df_initial,x='year',y='pixel_area_count',
+                                        range_x=[2020, 2022],
+                                        range_y=[0, 8],
+                                        labels={'year': 'Year','pixel_area_count': 'Area Covered  (m\u00b2) '})
+
+            species_time_series_plot.update_layout(
+                    xaxis = dict(
+                        tickmode = 'array',
+                        tickvals = [2020,2021,2022],
+                        ticktext = ['2020', '2021', '2022'],
+                        showgrid=False),
+                        yaxis=dict(showgrid=False))
+
+
+              
+
+
+
+
+
+    if survey_name == 'Loch Creran T1':
+        map_view['center'] =  [Creran_15_03_23_T1_center_coords[1],Creran_15_03_23_T1_center_coords[0]]
+        map_view['zoom'] = 20
+    
+    
+    if map_view != intermediate_mapview:
+          survey_name_out = 'none'
+    else: 
+          survey_name_out = survey_name
+          
+    intermediate_mapview = map_view
 
     #  update plots depending polygon selection
     if intermediate_polygon:
         if not polygon_json:
             polygon_json  = copy.deepcopy(intermediate_polygon)
     
-    if type(polygon_json) != 'NoneType':
+    if polygon_json is not None:
         if len(polygon_json['features'])>0:
-            # find area of edit control polygon in metres sq
-            poly = ogr.CreateGeometryFromJson(str(polygon_json['features'][-1]['geometry']))
-            source = osr.SpatialReference()
-            source.ImportFromEPSG(4326)
-            target = osr.SpatialReference()
-            target.ImportFromEPSG(27700)
-            transform = osr.CoordinateTransformation(source, target)
-            poly.Transform(transform)
-            edit_control_sqm_area=poly.GetArea()
-
             # convert json coordinatees to format expected by rasterio
             polygon_json_raterio = copy.deepcopy(polygon_json)
             polygon_json_raterio['features'][-1]['geometry']['coordinates'][0] = [tuple(polygon_json_raterio) for polygon_json_raterio in polygon_json_raterio['features'][-1]['geometry']['coordinates'][0] ]
@@ -374,16 +448,11 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
         
             
             # read raster values from within polygon had to give boundaries of mask value of 99 to avoid zero padding
-            if slider_values[1] == 2020:
-                with rasterio.open(date_slider_file_dict[2020]) as src:
-                    pink_out_image, out_transform = rasterio.mask.mask(src,[polygon_json_raterio['features'][-1]['geometry']], crop=True,pad=True,nodata=99)
-
-            # read raster values from within polygon had to give boundaries of mask value of 99 to avoid zero padding
-            if slider_values[1]  == 2021:
+            if slider_values[0]  == 2021:
                 with rasterio.open(date_slider_file_dict[2021]) as src:
                     pink_out_image, out_transform = rasterio.mask.mask(src,[polygon_json_raterio['features'][-1]['geometry']], crop=True,pad=True,nodata=99)
 
-            if slider_values[1] == 2022:
+            if slider_values[0] == 2022:
                 with rasterio.open(date_slider_file_dict[2022]) as src:
                     pink_out_image, out_transform = rasterio.mask.mask(src,[polygon_json_raterio['features'][-1]['geometry']], crop=True,pad=True,nodata=99)
 
@@ -393,21 +462,15 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
             pink_non_zero_alpha_band_count_percent_text = f"{pink_non_zero_alpha_band_count_decimal*100:.2f}%"
             
 
-            ## do same with different species colour
-            with rasterio.open("/Users/matthewtoberman/Downloads/CRACK_ID_blue_flipped_downsample.tif") as src:
-                blue_out_image, out_transform = rasterio.mask.mask(src,[polygon_json_raterio['features'][-1]['geometry']], crop=True,pad=True,nodata=99)
-            
-            blue_non_zero_alpha_band_count = ((blue_out_image[3,:,:] ==  255)).sum()
-            blue_non_zero_alpha_band_count_decimal = (((blue_out_image[3,:,:] ==  255)).sum()/((blue_out_image[3,:,:] != 99)).sum())
             
             # count no species coloured pixels
-            no_species_count = ((pink_out_image[3,:,:] != 99)).sum()-((blue_out_image[3,:,:] ==  255)).sum()-((pink_out_image[3,:,:] ==  255)).sum()
+            no_species_count = ((pink_out_image[3,:,:] != 99)).sum()-((pink_out_image[3,:,:] ==  255)).sum()
 
             # create data frame for species plots
             species_df = pd.DataFrame(['pink'],columns=['Species'])
             species_df['Pixel Count'] = pink_non_zero_alpha_band_count
             species_df['coverage_sqm']= pink_non_zero_alpha_band_count*pixel_area
-            species_df.loc[len(species_df)] = ['blue',blue_non_zero_alpha_band_count,blue_non_zero_alpha_band_count*pixel_area] 
+            species_df.loc[len(species_df)] = ['blue',0,0] 
             species_df.loc[len(species_df)] = ['none',no_species_count,0] 
 
             species_pie = px.pie(species_df,values='Pixel Count', names='Species', color='Species',color_discrete_map={'pink':'DeepPink',
@@ -443,216 +506,152 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
             showgrid=False),
             yaxis=dict(showgrid=False))
 
+
         else:
-
-            species_df = pd.DataFrame(['pink'],columns=['Species'])
-            species_df['Pixel Count'] = 0
-            species_df['coverage_sqm']= 0
-            species_df.loc[len(species_df)] = ['blue',0,0] 
-            species_df.loc[len(species_df)] = ['none',1,1] 
-
-
-            species_pie = px.pie(species_df,values='Pixel Count', names='Species', color='Species',color_discrete_map={'pink':'DeepPink',
-                                            'blue':'Cyan',
-                                            'none':'DimGray'})
-            
-            species_bar = px.bar(species_df[species_df['Species']!= 'none'],x='Species',y='coverage_sqm', color='Species',
-                                color_discrete_map={'pink':'DeepPink','blue':'Cyan'},
-                                    labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (m\u00b2) '},
-                                    range_y=[0, 5])
-            
-            species_time_series_plot = px.line(species_time_series_df_initial,x='year',y='pixel_area_count',
-                                    range_x=[2020, 2022],
-                                    range_y=[0, 8],
-                                    labels={'year': 'Year','pixel_area_count': 'Area Covered  (m\u00b2) '})
-
-            species_time_series_plot.update_layout(
-                xaxis = dict(
-                    tickmode = 'array',
-                    tickvals = [2020,2021,2022],
-                    ticktext = ['2020', '2021', '2022'],
-                    showgrid=False),
-                    yaxis=dict(showgrid=False))
+            if survey_name != 'Ardmucknish Bay':
+                print('overwrite_zero_test')
+                species_df = pd.DataFrame(['pink'],columns=['Species'])
+                species_df['Pixel Count'] = 0
+                species_df['coverage_sqm']= 0
+                species_df.loc[len(species_df)] = ['blue',0,0] 
+                species_df.loc[len(species_df)] = ['none',1,1] 
 
 
-            edit_control_sqm_area = 0
-            pink_non_zero_alpha_band_count = 0
+                species_pie = px.pie(species_df,values='Pixel Count', names='Species', color='Species',color_discrete_map={'pink':'DeepPink',
+                                                'blue':'Cyan',
+                                                'none':'DimGray'})
+                
+                species_bar = px.bar(species_df[species_df['Species']!= 'none'],x='Species',y='coverage_sqm', color='Species',
+                                    color_discrete_map={'pink':'DeepPink','blue':'Cyan'},
+                                        labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (m\u00b2) '},
+                                        range_y=[0, 5])
+                
+                species_time_series_plot = px.line(species_time_series_df_initial,x='year',y='pixel_area_count',
+                                        range_x=[2020, 2022],
+                                        range_y=[0, 8],
+                                        labels={'year': 'Year','pixel_area_count': 'Area Covered  (m\u00b2) '})
+
+                species_time_series_plot.update_layout(
+                    xaxis = dict(
+                        tickmode = 'array',
+                        tickvals = [2020,2021,2022],
+                        ticktext = ['2020', '2021', '2022'],
+                        showgrid=False),
+                        yaxis=dict(showgrid=False))
+
+
+                edit_control_sqm_area = 0
+                pink_non_zero_alpha_band_count = 0   
+
+    # else:
+    #     species_df = pd.DataFrame(['pink'],columns=['Species'])
+    #     species_df['Pixel Count'] = 0
+    #     species_df['coverage_sqm']= 0
+    #     species_df.loc[len(species_df)] = ['blue',0,0] 
+    #     species_df.loc[len(species_df)] = ['none',1,1] 
+
+
+    #     species_pie = px.pie(species_df,values='Pixel Count', names='Species', color='Species',color_discrete_map={'pink':'DeepPink',
+    #                                     'blue':'Cyan',
+    #                                     'none':'DimGray'})
+        
+    #     species_bar = px.bar(species_df[species_df['Species']!= 'none'],x='Species',y='coverage_sqm', color='Species',
+    #                         color_discrete_map={'pink':'DeepPink','blue':'Cyan'},
+    #                             labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (m\u00b2) '},
+    #                             range_y=[0, 5])
+        
+    #     species_time_series_plot = px.line(species_time_series_df_initial,x='year',y='pixel_area_count',
+    #                             range_x=[2020, 2022],
+    #                             range_y=[0, 8],
+    #                             labels={'year': 'Year','pixel_area_count': 'Area Covered  (m\u00b2) '})
+
+    #     species_time_series_plot.update_layout(
+    #         xaxis = dict(
+    #             tickmode = 'array',
+    #             tickvals = [2020,2021,2022],
+    #             ticktext = ['2020', '2021', '2022'],
+    #             showgrid=False),
+    #             yaxis=dict(showgrid=False))
+
+
+    #     edit_control_sqm_area = 0
+    #     pink_non_zero_alpha_band_count = 0
 
 
 
     intermediate_slider_value_dict = {'value': slider_values[0]}
 
 
-    # update map based on slider position
-    if slider_values[1]  == 2020:
-                    # update map
-            map_children =[ 
-                dl.LayersControl([
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
-                #COG fed into Tilelayer using TiTiler url (taken from r["tiles"][0])
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="t0",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_3["tiles"][0], opacity=0.4,id="species_blue")),name="Species_blue",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-
-                dl.LayerGroup(id="layer"),
-                info]),
-                dl.FeatureGroup([dl.EditControl(id="edit_control")]),
-                dl.GeoJSON(data=geojson_mss)]
-            
-    if slider_values[1] == 2021:
-                map_children=[ 
-            dl.LayersControl([
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
-                   #COG fed into Tilelayer using TiTiler url (taken from r["tiles"][0])
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t1["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_3["tiles"][0], opacity=0.4,id="species_blue")),name="Species_blue",checked=True),
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-                   dl.LayerGroup(id="layer"),
-                   info]),
-                   dl.FeatureGroup([dl.EditControl(id="edit_control")]),
-                   dl.GeoJSON(data=geojson_mss)]
-    
-    if slider_values[1]  == 2022:
-                map_children=[ 
-            dl.LayersControl([
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
-                   #COG fed into Tilelayer using TiTiler url (taken from r["tiles"][0])
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t2["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
-                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_3["tiles"][0], opacity=0.4,id="species_blue")),name="Species_blue",checked=True),
-                     dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-                   dl.LayerGroup(id="layer"),
-                   info]),
-                     dl.FeatureGroup([dl.EditControl(id="edit_control")]),
-                dl.GeoJSON(data=geojson_mss)]
+    # update map based on slider positio
+                
     # if not map_view:
     #     current_zoom = start_zoom
     # else:
     #     current_zoom = map_view['zoom']
 
-    if slider_values[1]  == 2020 and  map_view['zoom'] <= 20:
-                    # update map
-        map_children =[ 
-            dl.LayersControl([
-            dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
-            #COG fed into Tilelayer using TiTiler url (taken from r["tiles"][0])
-            dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
-            dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
-            dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="t0",checked=True),
-            dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_3["tiles"][0], opacity=0.4,id="species_blue")),name="Species_blue",checked=True),
-                               dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-            dl.LayerGroup(id="layer"),
-            info]),
-            dl.FeatureGroup([dl.EditControl(id="edit_control")]),
-            dl.GeoJSON(data=geojson_mss),
-            ard_bay_marker,
-            Creran_15_03_23_T1_marker]
-        
-    if slider_values[1] == 2021 and  map_view['zoom'] <= 20:
+  
+    if slider_values[0] == 2021 and  map_view['zoom'] <= 20:
                 map_children=[ 
             dl.LayersControl([
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
-                #COG fed into Tilelayer using TiTiler url (taken from r["tiles"][0])
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t1["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_3["tiles"][0], opacity=0.4,id="species_blue")),name="Species_blue",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-
-                dl.LayerGroup(id="layer"),
-                info]),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
+                   #COG fed into Tilelayer using TiTiler url (taken from r["tiles"][0])
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
+                   dl.LayerGroup(id="layer"),
+                   info]),
             dl.FeatureGroup([dl.EditControl(id="edit_control")]),
-            dl.GeoJSON(data=geojson_mss),
             ard_bay_marker,
             Creran_15_03_23_T1_marker]
     
-    if slider_values[1]  == 2022 and  map_view['zoom'] <= 20:
+    if slider_values[0]  == 2022 and  map_view['zoom'] <= 20:
                 map_children=[ 
             dl.LayersControl([
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
-                #COG fed into Tilelayer using TiTiler url (taken from r["tiles"][0])
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t2["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_3["tiles"][0], opacity=0.4,id="species_blue")),name="Species_blue",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-                dl.LayerGroup(id="layer"),
-                info]),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
+                                      dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
+
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_diver_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_diver_request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
+                     dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
+                   dl.LayerGroup(id="layer"),
+                   info]),
             dl.FeatureGroup([dl.EditControl(id="edit_control")]),
-            dl.GeoJSON(data=geojson_mss),
             ard_bay_marker,
             Creran_15_03_23_T1_marker]
 
 
-    if slider_values[1]  == 2020 and  map_view['zoom'] > 20:
-                    # update map
-            map_children =[ 
-                dl.LayersControl([
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
-                #COG fed into Tilelayer using TiTiler url (taken from r["tiles"][0])
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="t0",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_3["tiles"][0], opacity=0.4,id="species_blue")),name="Species_blue",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-                dl.LayerGroup(id="layer"),
-                info]), 
-            dl.FeatureGroup([dl.EditControl(id="edit_control")]),
-            dl.GeoJSON(data=geojson_mss)]
 
-
-    if slider_values[1] == 2021 and  map_view['zoom'] > 20:
+    if slider_values[0] == 2021 and  map_view['zoom'] > 20:
                 map_children=[ 
             dl.LayersControl([
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
-                #COG fed into Tilelayer using TiTiler url (taken from r["tiles"][0])
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t1["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_3["tiles"][0], opacity=0.4,id="species_blue")),name="Species_blue",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-                dl.LayerGroup(id="layer"),
-                info]),
-                dl.FeatureGroup([dl.EditControl(id="edit_control")]),
-                dl.GeoJSON(data=geojson_mss)]
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
+                   dl.LayerGroup(id="layer"),
+                   info]),
+                   dl.FeatureGroup([dl.EditControl(id="edit_control")]),
+]
     
-    if slider_values[1]  == 2022 and  map_view['zoom'] > 20:
+    if slider_values[0]  == 2022 and  map_view['zoom'] > 20:
                 map_children=[ 
             dl.LayersControl([
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
-                #COG fed into Tilelayer using TiTiler url (taken from r["tiles"][0])
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t2["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_3["tiles"][0], opacity=0.4,id="species_blue")),name="Species_blue",checked=True),
-                dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-                dl.LayerGroup(id="layer"),
-                info]),
-                dl.FeatureGroup([dl.EditControl(id="edit_control")]),
-                dl.GeoJSON(data=geojson_mss)]
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",id="TileMap")),name="BaseMap",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_diver_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_diver_request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
+                     dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
+                   dl.LayerGroup(id="layer"),
+                   info]),
+                     dl.FeatureGroup([dl.EditControl(id="edit_control")]),
+]
                     
     
 
-    if survey_name == 'Ardmucknish Bay':
-        map_view['center'] =  [ard_bay_center_coords[1],ard_bay_center_coords[0]]
-        map_view['zoom'] = 20
-    if survey_name == 'Loch Creran T1':
-        map_view['center'] =  [Creran_15_03_23_T1_center_coords[1],Creran_15_03_23_T1_center_coords[0]]
-        map_view['zoom'] = 20
-    
-    print(f'intermediate_mapview = {intermediate_mapview}')
-    print(f'map_view = {map_view}')
-    if map_view != intermediate_mapview:
-          print('test')
-          survey_name_out = 'none'
-    # survey_name_out = survey_name  
-    intermediate_mapview = map_view
-    return species_pie , species_bar , map_children, polygon_json , intermediate_slider, species_time_series_plot, intermediate_mapview, survey_name_out, map_view
+
+    return species_pie , species_bar , map_children, polygon_json , intermediate_slider, species_time_series_plot, intermediate_mapview, survey_name_out, map_view, info_out
 
 
 
