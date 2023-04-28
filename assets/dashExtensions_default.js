@@ -12,3 +12,18 @@ window.dashExtensions = Object.assign({}, window.dashExtensions, {
         }
     }
 });
+
+window.dashExtensions = Object.assign({}, window.dashExtensions, {
+    dashExtensionssub: {
+        draw_icon: function(feature, latlng) {
+            const flag = L.icon({
+                iconUrl: `assets/${feature.properties.iso2}.png`,
+                iconSize: [48, 48]
+            });
+            return L.marker(latlng, {
+                icon: flag
+            });
+        },
+    }
+});
+

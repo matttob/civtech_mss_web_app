@@ -66,8 +66,14 @@ def whole_geotiff_polygon(url):
         "url": url,
         }
     ).json()
-    entire_geotiff_poly = bounded_data
+    entire_geotiff_poly = Polygon([[bounded_data['bounds'][0],bounded_data['bounds'][1]],
+                      [bounded_data['bounds'][2],bounded_data['bounds'][1]],
+                      [bounded_data['bounds'][2],bounded_data['bounds'][3]],
+                      [bounded_data['bounds'][0],bounded_data['bounds'][3]]])
     return entire_geotiff_poly
+
+
+
 
 
 # Enter tiler details
@@ -75,11 +81,11 @@ titiler_endpoint= "https://os8ci3nx02.execute-api.eu-west-2.amazonaws.com"  # ti
 
 
 # survey locations
-survey_location_list = ['none','Ardmucknish Bay','Loch Creran T1']
+survey_location_list = ['none','Ardmucknish Bay ROV','Ardmucknish Bay Diver','Loch Creran T1', 'Loch Creran Serpulids']
 
 
 
-ard_bay_url = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_ROV_20_10_2_5mmPix_wgs84_test.tif"
+ard_bay_url = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_ROV_20_10_2_5mmPix_wgs84_test_Georeferenced_clipped.tif"
 ard_bay_request = httpx.get(
     f"{titiler_endpoint}/cog/tilejson.json",
     params = {
@@ -126,8 +132,6 @@ request_bathy_dem_url = httpx.get(
 
 
 
-
-
 ard_bay_diver_url = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_crack_diverModel_Orthomosaic.tif"
 ard_bay_diver_request = httpx.get(
     f"{titiler_endpoint}/cog/tilejson.json",
@@ -163,10 +167,31 @@ Creran_15_03_23_T1_center_coords  = get_centre_geotiff("https://tiletesting.s3.e
 Creran_15_03_23_T1_marker = dl.Marker(id='Creran_15_03_23_T1_marker', position=(Creran_15_03_23_T1_center_coords[1], Creran_15_03_23_T1_center_coords[0]))
 
 
+Creran_serp_url = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_CrereanSerpOrthoCropped.tif"
+Creran_serp_request = httpx.get(
+    f"{titiler_endpoint}/cog/tilejson.json",
+    params = {
+        "url": Creran_serp_url,
+        "rescale": f"{0},{255}",
+    }
+).json()
+
+Creran_serp_ID_url = "https://tiletesting.s3.eu-west-2.amazonaws.com/COG_CreranSerpClassified_downsample.tif"
+Creran_serp_ID_request = httpx.get(
+    f"{titiler_endpoint}/cog/tilejson.json",
+    params = {
+        "url": Creran_serp_ID_url,
+        "rescale": f"{0},{255}",
+    }
+).json()
+
+Creran_serp_center_coords  = get_centre_geotiff("https://tiletesting.s3.eu-west-2.amazonaws.com/COG_Creran_15_03_23_T1.tif")
+Creran_serp_marker = dl.Marker(id='Creran_15_03_23_T1_marker', position=(Creran_serp_center_coords[1], Creran_serp_center_coords[0]))
 
 
 
-date_slider_file_dict = {2021 : '/Users/matthewtoberman/Downloads/CRACK_ID_pink_downsample.tif', 
+
+date_slider_file_dict = {2021 : '/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/data/CRACK_ID_pink_downsample.tif', 
                             2022 : '/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/data/crack_species_only_Orthomosaic_downsample.tif'}
 
 
@@ -191,7 +216,7 @@ species_pie = px.pie(species_df_initial,values='Pixel Count', names='Species', c
 
 species_bar = px.bar(species_df_initial[species_df_initial['Species']!= 'none'],x='Species',y='coverage_sqm', color='Species',
                      color_discrete_map={'pink':'DeepPink','blue':'Cyan'},
-                     labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (m\u00b2) '},
+                     labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (Testing) '},
                      range_y=[0, 8])
 
 
@@ -205,7 +230,7 @@ species_bar.update_layout(
 species_time_series_plot = px.line(species_time_series_df_initial,x='year',y='pixel_area_count',
                                     range_x=[2020, 2022],
                                     range_y=[0, 8],
-                                    labels={'year': 'Year','pixel_area_count': 'Area Covered  (m\u00b2) '})
+                                    labels={'year': 'Year','pixel_area_count': 'Area Covered  (Testing) '})
 
 species_time_series_plot.update_layout(
     xaxis = dict(
@@ -263,6 +288,8 @@ dl.Map(style={'width': '800px', 'height': '400px','margin': '30px'},
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_serp_request["tiles"][0],id="Crean_serp_ortho")),name="Crean_serp_Ortho",checked=True),
+                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_serp_ID_request["tiles"][0],id="Crean_serp_ID_ortho")),name="Crean_serp_ID_Ortho",checked=True),
                    dl.LayerGroup(id="layer"),
                    info]),
                 dl.FeatureGroup([dl.EditControl(id="edit_control")]),
@@ -323,38 +350,18 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
     info_out = str(date_slider_file_dict[slider_values[0]].split('/')[-1])
 
 
-
-
-
-   
     if map_view is None:
           map_view = {'center': [56.58215811323581, -5.701866236751068], 'zoom': 9}
-    # if type(map_view) != 'NoneType' and type(intermediate_mapview ) != 'NoneType' :
-    #         intermediate_mapview = start_mapview
-    # #         current_zoom = map_view['zoom']
-    #         print(f'intermediate = {intermediate_mapview}')
 
 
-
-    if survey_name == 'Ardmucknish Bay':
+    if survey_name == 'Ardmucknish Bay ROV':
         map_view['center'] =  [ard_bay_center_coords[1],ard_bay_center_coords[0]]
         map_view['zoom'] = 20
 
-
-
- 
-
-
         if polygon_json is None:
-            print('test_no_user_poly')
-            entire_ortho_poly= Polygon([[whole_geotiff_polygon(ard_bay_url)['bounds'][0],whole_geotiff_polygon(ard_bay_url)['bounds'][1]],
-                      [whole_geotiff_polygon(ard_bay_url)['bounds'][2],whole_geotiff_polygon(ard_bay_url)['bounds'][1]],
-                      [whole_geotiff_polygon(ard_bay_url)['bounds'][2],whole_geotiff_polygon(ard_bay_url)['bounds'][3]],
-                      [whole_geotiff_polygon(ard_bay_url)['bounds'][0],whole_geotiff_polygon(ard_bay_url)['bounds'][3]]])
-                  
+            entire_ortho_poly= whole_geotiff_polygon(ard_bay_url)
             with rasterio.open(date_slider_file_dict[slider_values[0]]) as src:
                 pink_out_image, out_transform = rasterio.mask.mask(src,[entire_ortho_poly], crop=True,pad=True,nodata=99)
-
             pink_non_zero_alpha_band_count = ((pink_out_image[3,:,:] ==  255)).sum()
             print(pink_non_zero_alpha_band_count)
             # count no species coloured pixels
@@ -373,7 +380,7 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
 
             species_bar = px.bar(species_df[species_df['Species']!= 'none'],x='Species',y='coverage_sqm', color='Species',
                                     color_discrete_map={'pink':'DeepPink','blue':'Cyan'},
-                                    labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (m\u00b2) '},
+                                    labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (Testing) '},
                                     range_y=[0, 8])
             species_bar.update_layout(
             showlegend=False,
@@ -384,7 +391,7 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
             species_time_series_plot = px.line(species_time_series_df_initial,x='year',y='pixel_area_count',
                                         range_x=[2020, 2022],
                                         range_y=[0, 8],
-                                        labels={'year': 'Year','pixel_area_count': 'Area Covered  (m\u00b2) '})
+                                        labels={'year': 'Year','pixel_area_count': 'Area Covered  (Testing) '})
 
             species_time_series_plot.update_layout(
                     xaxis = dict(
@@ -395,17 +402,60 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
                         yaxis=dict(showgrid=False))
 
 
-              
-
-
-
-
 
     if survey_name == 'Loch Creran T1':
         map_view['center'] =  [Creran_15_03_23_T1_center_coords[1],Creran_15_03_23_T1_center_coords[0]]
         map_view['zoom'] = 20
     
-    
+
+    if survey_name == 'Loch Creran Serpulids':
+        map_view['center'] =  [Creran_serp_center_coords[1],Creran_serp_center_coords[0]]
+        map_view['zoom'] = 20
+
+        if polygon_json is None:
+            entire_ortho_poly= whole_geotiff_polygon(Creran_serp_url)
+            with rasterio.open('/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/ortho_geotiff/CreranSerpClassified_downsample.tif') as src:
+                pink_out_image, out_transform = rasterio.mask.mask(src,[entire_ortho_poly], crop=True,pad=True,nodata=99)
+            pink_non_zero_alpha_band_count = ((pink_out_image[3,:,:] ==  255)).sum()
+            print(pink_non_zero_alpha_band_count)
+            # count no species coloured pixels
+            no_species_count = ((pink_out_image[3,:,:] != 99)).sum()-((pink_out_image[3,:,:] ==  255)).sum()
+
+            # create data frame for species plots
+            species_df = pd.DataFrame(['pink'],columns=['Species'])
+            species_df['Pixel Count'] = pink_non_zero_alpha_band_count
+            species_df['coverage_sqm']= pink_non_zero_alpha_band_count*pixel_area
+            species_df.loc[len(species_df)] = ['blue',0,0] 
+            species_df.loc[len(species_df)] = ['none',no_species_count,0] 
+
+            species_pie = px.pie(species_df,values='Pixel Count', names='Species', color='Species',color_discrete_map={'pink':'DeepPink',
+                                        'blue':'Cyan',
+                                        'none':'DimGray'})
+
+            species_bar = px.bar(species_df[species_df['Species']!= 'none'],x='Species',y='coverage_sqm', color='Species',
+                                    color_discrete_map={'pink':'DeepPink','blue':'Cyan'},
+                                    labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (Testing) '},
+                                    range_y=[0, 8])
+            species_bar.update_layout(
+            showlegend=False,
+            xaxis = dict(
+             showgrid=False),
+            yaxis=dict(showgrid=False))
+
+            species_time_series_plot = px.line(species_time_series_df_initial,x='year',y='pixel_area_count',
+                                        range_x=[2020, 2022],
+                                        range_y=[0, 8],
+                                        labels={'year': 'Year','pixel_area_count': 'Area Covered  (Testing) '})
+
+            species_time_series_plot.update_layout(
+                    xaxis = dict(
+                        tickmode = 'array',
+                        tickvals = [2020,2021,2022],
+                        ticktext = ['2020', '2021', '2022'],
+                        showgrid=False),
+                        yaxis=dict(showgrid=False))
+
+
     if map_view != intermediate_mapview:
           survey_name_out = 'none'
     else: 
@@ -479,7 +529,7 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
 
             species_bar = px.bar(species_df[species_df['Species']!= 'none'],x='Species',y='coverage_sqm', color='Species',
                                     color_discrete_map={'pink':'DeepPink','blue':'Cyan'},
-                                    labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (m\u00b2) '},
+                                    labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (Testing) '},
                                     range_y=[0, 8])
             species_bar.update_layout(
             showlegend=False,
@@ -491,7 +541,7 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
             species_time_series_plot = px.line(species_time_series_df,x='year',y='pixel_area_count',
                                     range_x=[2020, 2022],
                                     range_y=[0, 8],
-                                    labels={'year': 'Year','pixel_area_count': 'Area Covered  (m\u00b2) '})
+                                    labels={'year': 'Year','pixel_area_count': 'Area Covered  (Testing) '})
             species_time_series_plot.update_layout(
                                         xaxis = dict(
                                         tickmode = 'array',
@@ -508,8 +558,8 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
 
 
         else:
-            if survey_name != 'Ardmucknish Bay':
-                print('overwrite_zero_test')
+            print(survey_name)
+            if survey_name != 'Ardmucknish Bay ROV' and survey_name != 'Loch Creran Serpulids' :
                 species_df = pd.DataFrame(['pink'],columns=['Species'])
                 species_df['Pixel Count'] = 0
                 species_df['coverage_sqm']= 0
@@ -523,13 +573,13 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
                 
                 species_bar = px.bar(species_df[species_df['Species']!= 'none'],x='Species',y='coverage_sqm', color='Species',
                                     color_discrete_map={'pink':'DeepPink','blue':'Cyan'},
-                                        labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (m\u00b2) '},
+                                        labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (Testing) '},
                                         range_y=[0, 5])
                 
                 species_time_series_plot = px.line(species_time_series_df_initial,x='year',y='pixel_area_count',
                                         range_x=[2020, 2022],
                                         range_y=[0, 8],
-                                        labels={'year': 'Year','pixel_area_count': 'Area Covered  (m\u00b2) '})
+                                        labels={'year': 'Year','pixel_area_count': 'Area Covered  (Testing) '})
 
                 species_time_series_plot.update_layout(
                     xaxis = dict(
@@ -557,13 +607,13 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
         
     #     species_bar = px.bar(species_df[species_df['Species']!= 'none'],x='Species',y='coverage_sqm', color='Species',
     #                         color_discrete_map={'pink':'DeepPink','blue':'Cyan'},
-    #                             labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (m\u00b2) '},
+    #                             labels={'Species': 'Species Type','coverage_sqm': 'Area Covered  (Testing) '},
     #                             range_y=[0, 5])
         
     #     species_time_series_plot = px.line(species_time_series_df_initial,x='year',y='pixel_area_count',
     #                             range_x=[2020, 2022],
     #                             range_y=[0, 8],
-    #                             labels={'year': 'Year','pixel_area_count': 'Area Covered  (m\u00b2) '})
+    #                             labels={'year': 'Year','pixel_area_count': 'Area Covered  (Testing) '})
 
     #     species_time_series_plot.update_layout(
     #         xaxis = dict(
@@ -599,7 +649,8 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-                   dl.LayerGroup(id="layer"),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_serp_request["tiles"][0],id="Crean_serp_ortho")),name="Crean_serp_Ortho",checked=True),
+                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_serp_ID_request["tiles"][0],id="Crean_serp_ID_ortho")),name="Crean_serp_ID_Ortho",checked=True),                   dl.LayerGroup(id="layer"),
                    info]),
             dl.FeatureGroup([dl.EditControl(id="edit_control")]),
             ard_bay_marker,
@@ -613,8 +664,9 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
 
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_diver_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_diver_request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
-                     dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-                   dl.LayerGroup(id="layer"),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_serp_request["tiles"][0],id="Crean_serp_ortho")),name="Crean_serp_Ortho",checked=True),
+                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_serp_ID_request["tiles"][0],id="Crean_serp_ID_ortho")),name="Crean_serp_ID_Ortho",checked=True),                   dl.LayerGroup(id="layer"),
                    info]),
             dl.FeatureGroup([dl.EditControl(id="edit_control")]),
             ard_bay_marker,
@@ -630,7 +682,8 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-                   dl.LayerGroup(id="layer"),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_serp_request["tiles"][0],id="Crean_serp_ortho")),name="Crean_serp_Ortho",checked=True),
+                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_serp_ID_request["tiles"][0],id="Crean_serp_ID_ortho")),name="Crean_serp_ID_Ortho",checked=True),                   dl.LayerGroup(id="layer"),
                    info]),
                    dl.FeatureGroup([dl.EditControl(id="edit_control")]),
 ]
@@ -642,8 +695,9 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=request_bathy_dem_url["tiles"][0],id="bathy", maxZoom=1000)),name="bathy",checked=True),
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_diver_request["tiles"][0],id="ortho")),name="Ortho",checked=True),
                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=ard_bay_diver_request_pink_t0["tiles"][0], opacity=0.4,id="species_pink")),name="Species_pink",checked=True),
-                     dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
-                   dl.LayerGroup(id="layer"),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_15_03_23_T1_request["tiles"][0],id="Crean_15_03_23_T1_ortho")),name="Crean_15_03_23_T1_Ortho",checked=True),
+                   dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_serp_request["tiles"][0],id="Crean_serp_ortho")),name="Crean_serp_Ortho",checked=True),
+                    dl.Overlay(dl.LayerGroup(dl.TileLayer(url=Creran_serp_ID_request["tiles"][0],id="Crean_serp_ID_ortho")),name="Crean_serp_ID_Ortho",checked=True),                   dl.LayerGroup(id="layer"),
                    info]),
                      dl.FeatureGroup([dl.EditControl(id="edit_control")]),
 ]
@@ -674,3 +728,9 @@ def count_species_cover_in_polygon(slider_values,intermediate_slider,intermediat
 
 if __name__ == '__main__':
     app.run_server(debug=True,port=8053)
+
+
+
+
+
+            
