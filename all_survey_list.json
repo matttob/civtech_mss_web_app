@@ -1,0 +1,13 @@
+{
+    "survey_json_paths": [
+        "/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/meta_data/ard_bay_2022.json",
+        "/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/meta_data/ard_bay_2023.json",
+        "/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/meta_data/creran_2023.json",
+        "/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/meta_data/creran_T1_15_03_2023.json",
+        "/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/meta_data/CentralCreagan_HorseMussels_2023.json",
+        "/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/meta_data/Creagan_Bridge_HorseMussels_2023.json",
+        "/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/meta_data/COG_BN17_PORTAL.json",
+        "/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/meta_data/COG_BN18_PORTAL.json",
+        "/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/meta_data/COG_BN19_PORTAL.json"
+    ]
+}
