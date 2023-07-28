@@ -17,17 +17,15 @@ from shapely.geometry import shape, GeometryCollection, Point
 fiona.drvsupport.supported_drivers['KML'] = 'rw'
 ns = Namespace('dashExtensions','dashExtensionssub')
 
-
-
 # Images
 logo_image_path = 'assets/Logo2.png'
 
-survey_list_file_path = '/Users/matthewtoberman/Dropbox/TRITONIA/CIVTECH/PORTAL/meta_data/all_survey_list.json'
+# meta_data
+survey_list_file_path = 'all_survey_list.json'
 
 def load_meta_data(config_file_path):
     f = open(config_file_path)
     survey_json_paths = json.load(f)['survey_json_paths']
-
     # load all jsons could maybe load on demand in future
     survey_json_list = []
     for  survey in survey_json_paths:
@@ -36,8 +34,6 @@ def load_meta_data(config_file_path):
         survey_json_list.append(survey_json)
     survey_df = pd.DataFrame.from_dict(survey_json_list)
     return survey_df
-
-
 
 def create_marble_cutter_tile(url):
     marble_tile_request = httpx.get(f"http://tiles.rdnt.io/tiles?url={url}",
@@ -58,42 +54,33 @@ def set_map_view(map_view,survey_dash_id,survey_df):
     map_view['zoom'] = 23
     return map_view
 
-
 def write_info_out(survey_dash_id,survey_df):
     survey_data = survey_df.loc[survey_df['survey_dash_id'] == survey_dash_id]
     if  (len(survey_data['species_m2'].values)) > 0:
-
-
         info_out = ("** Survey Name** : " +  str(survey_data['survey_long_name'].values[0]) + " \n" + " \n" +
                 "**Species Present** : " + str(survey_data['species_name'].values[0]) + " \n" + " \n" +
                 "**Total Area of Species : **" + (str(survey_data['species_m2'].values[0]))+ " \n" + " \n" +
                 "**Number of Individuals : **" + str(survey_data['number_of_individuals'].values[0]) + " \n" + " \n" )
-
     else:
             info_out = ("** Survey Name** : " + " \n" + " \n" +
                     "**Species Present** : "  + " \n" + " \n" +
                     "**Total Area of Species : **"  + " \n" + " \n" +
                     "**Number of Individuals : **"  + " \n" + " \n" )
-
     return info_out
 
 def write_info_aggregate_out(survey_df):
     info_agg_out = ("**Species Present**"  + " \n" + " \n" )
     survey_df_filt_area= survey_df.groupby('species_name')['species_m2'].sum().to_frame()
     survey_df_filt_individuals = survey_df.groupby('species_name')['number_of_individuals'].sum().to_frame()
-
     for n in survey_df_filt_area.index:
         if type(survey_df_filt_area.loc[n]['species_m2']) == float:
             info = (n  + "  :  " + str('{0:.2f}'.format(survey_df_filt_area.loc[n]['species_m2']))+ " (m2)"" \n" + " \n" )
             info_agg_out = info_agg_out + info
-
     for n in survey_df_filt_individuals.index:
         if type(survey_df_filt_individuals.loc[n]['number_of_individuals']) == int:
             info = (n  + "  :  " + str(survey_df_filt_individuals.loc[n]['number_of_individuals'])+ " (Individuals)"" \n" + " \n" )
             info_agg_out = info_agg_out + info
-
     return info_agg_out
-
 
 def create_survey_markers(survey_df):
     survey_markers_dicts= []
@@ -104,10 +91,7 @@ def create_survey_markers(survey_df):
                         lat=survey_df['centre_coords'][n][0],
                         lon=survey_df['centre_coords'][n][1])
         survey_markers_dicts.append(survey_marker_dict)
-
-
     survey_markers_geojson = dlx.dicts_to_geojson([{**c, **dict(tooltip=c['name'])} for c in survey_markers_dicts])
-
     return survey_markers_geojson
 
 # create survey meta data dataframe
@@ -125,8 +109,6 @@ info = html.Div(dcc.Markdown(id="info", className="info",
 
 info_aggregate = html.Div(dcc.Markdown(id="info_aggregate", className="info_aggregate",),id ='info_aggregate_vis',
                           style = {"z-index": "999",'width':'200px','height':'50px',"position": "absolute", "top": "250px", "left": "120px",'background-color': 'white','border-radius': '10px','opacity': '0.9','visibility':'hidden'})
-
-
 
 species_time_series_df_initial_counts = [survey_df.loc[survey_df['survey_dash_id'] == 'ard_bay_2022']['species_m2'].values[0],
                                          survey_df.loc[survey_df['survey_dash_id'] == 'ard_bay_2023']['species_m2'].values[0]]
@@ -157,13 +139,6 @@ species_time_series_plot.update_layout(
          yaxis_title= "Species Coverage Area (m<sup>2</sup>)",
          xaxis_title= "Year")
 
-
-
-
-
-
-
-
 species_select_div =  html.Div(id="species_select_div", className="species_select_div",children=[
                 html.Label(['Filter by species:'], style={'font-weight': 'bold', "text-align": "center"}),
                 dcc.Dropdown(id = 'species_select',
@@ -175,8 +150,6 @@ species_select_div =  html.Div(id="species_select_div", className="species_selec
 trito_logo = html.Div(id="trito_logo", className="trito_logo",
                       style={"position": "absolute", "bottom": "40px", "left": "10px", "z-index": "1000"},
                       children = [html.Img(src=logo_image_path,style={'height':'10%', 'width':'10%'})])
-
-
 
 base_layer_list = [
                 dl.Overlay(dl.LayerGroup(dl.TileLayer(url="https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",id="TileMap")),name="BaseMap",checked=False),
@@ -194,7 +167,6 @@ map_children_iniital=[dl.LayersControl(base_layer_list[:])]
 # Set map default view
 start_zoom = 10
 map_centre_coords = [56.5314423498172, -5.619001454153479]
-
 
 #Create app layout
 app.layout = html.Div([
@@ -227,9 +199,6 @@ marks={
 )], style={"z-index": "999",'width':'300px','height':'35px',"position": "absolute", "top": "10px", "left": "0px",'background-color': 'white','border-radius': '10px','opacity': '0.9'}),
     style={"z-index": "999",'width':'300px','height':'50px',"position": "absolute", "top": "40px", "left": "120px",'background-color': 'white','border-radius': '10px','opacity': '0.9'}),
 
-
-
-
 html.Div([
     dcc.Graph(
         id='time_series_plot',
@@ -261,7 +230,6 @@ html.Div([
               Input("edit_control", "geojson"),
               )
 
-
 def update_map_and_graphics(map_view,
                             intermediate_mapview,
                             marker_clicks_0,
@@ -273,8 +241,6 @@ def update_map_and_graphics(map_view,
                             time_series_plot_div_style,
                             edit_control_polygon_json):
 
-    print(map_view)
-
     # some really crude ways to deal with null cases
     if map_view is None:
           map_view = {'center': [56.58215811323581, -5.701866236751068]}
@@ -285,40 +251,30 @@ def update_map_and_graphics(map_view,
     if not marker_clicks_0:
         marker_clicks_0 = 0
 
-
     # filter survey dataframe on year then species
     survey_df_species_filt = survey_df.copy()
     survey_df_species_filt = survey_df_species_filt[survey_df_species_filt['survey_date'] == str(survey_year[0]) ]
     if species_filter != 'all':
         survey_df_species_filt = survey_df_species_filt[survey_df_species_filt['species_name'] == str(species_filter) ]
 
-
-
     # filter species dataframe based on polygon selection
-
     if edit_control_polygon_json:
         if len(edit_control_polygon_json['features'])>0:
             print(edit_control_polygon_json['features'])
             survey_df_poly = survey_df_species_filt.copy()
             for n in survey_df_poly.index:
                 for feature in edit_control_polygon_json['features']:
-
                     polygon = shape(feature['geometry'])
-
                     if not (Point(survey_df['centre_coords'][n][1],survey_df['centre_coords'][n][0])).within(polygon):
                         survey_df_poly = survey_df_poly.drop(n)
-
             info_aggregate_out = write_info_aggregate_out(survey_df_poly)
             info_aggregate_style ={"z-index": "999",'width':'200px','height':'200px',"position": "absolute", "top": "350px", "left": "10px",'background-color': 'white','border-radius': '10px','opacity': '0.9','visibility':'visible'}
-
         else:
             info_aggregate_out = ''
             info_aggregate_style = {"z-index": "999",'width':'300px','height':'200px',"position": "absolute", "top": "350px", "left": "10px",'background-color': 'white','border-radius': '10px','opacity': '0.9','visibility':'hidden'}
     else:
         info_aggregate_out = ''
         info_aggregate_style = {"z-index": "999",'width':'200px','height':'200px',"position": "absolute", "top": "350px", "left": "10px",'background-color': 'white','border-radius': '10px','opacity': '0.9','visibility':'hidden'}
-
-
 
     # create layers for photogrametty orhtos and species polygons
     layer_level = 0
@@ -331,27 +287,19 @@ def update_map_and_graphics(map_view,
         map_layer_list.insert(layer_level+len(base_layer_list),survey_map_overlay_layer)
         if  len(survey_df_species_filt['species_polygons'][n])>1:
             if survey_df_species_filt['species_polygons'][n]['features'][0]['geometry']['type'] == 'Polygon':
-
                 species_poly_map_overlay_layer = dl.Overlay(dl.GeoJSON(data=survey_df_species_filt['species_polygons'][n] , id=  survey_df_species_filt['survey_dash_id'][n] + '_species' ),name = survey_df_species_filt['survey_long_name'][n]+'species',checked=True)
-
                 map_layer_list.insert(layer_level+1+len(base_layer_list), species_poly_map_overlay_layer)
                 layer_level += 2
             elif survey_df_species_filt['species_polygons'][n]['features'][0]['geometry']['type'] == 'Point':
                 for ii in range(0,len(survey_df_species_filt['species_polygons'][n]['features'])):
                     survey_df_species_filt['species_polygons'][n]['features'][ii]['properties']['iso2'] = 'serp_individual'
                     survey_df_species_filt['species_polygons'][n]['features'][ii]['properties']['marker_size'] = 20
-
                 species_poly_map_overlay_layer = dl.GeoJSON(data=survey_df_species_filt['species_polygons'][n],options=dict(pointToLayer=ns('draw_icon')),id=survey_df_species_filt['survey_dash_id'][n])
-
-
-
                 map_layer_list.insert(layer_level+1+len(base_layer_list), species_poly_map_overlay_layer)
                 layer_level += 2
 
-
     # create layers for survery location markers
     # Survey position markers
-
     survey_markers_dicts= []
     for n in survey_df_species_filt.index:
         survey_marker_dict = dict(name=survey_df_species_filt['survey_long_name'][n],
@@ -360,18 +308,14 @@ def update_map_and_graphics(map_view,
                         lat=survey_df_species_filt['centre_coords'][n][0],
                         lon=survey_df_species_filt['centre_coords'][n][1])
         survey_markers_dicts.append(survey_marker_dict)
-
     survery_marker_data = dlx.dicts_to_geojson([{**c, **dict(tooltip=c['name'])} for c in survey_markers_dicts])
-
 
     map_children_out=[dl.LayersControl(map_layer_list[:])]
 
     ctx = callback_context
     input_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if len(survey_df.loc[survey_df['survey_long_name'] == marker_hover['properties']['name']]['survey_dash_id'].values) > 0 :
-
         # currently just a hard wired list of each survey names in if statements must be changed to iterate over all surveys
-
         if survey_df.loc[survey_df['survey_long_name'] == marker_hover['properties']['name']]['survey_dash_id'].values[0] == 'ard_bay_2023' and  marker_clicks_0 > 0   :
             set_map_view(map_view,'ard_bay_2023',survey_df)
             info_out = write_info_out('ard_bay_2023',survey_df)
@@ -386,8 +330,6 @@ def update_map_and_graphics(map_view,
             time_series_plot_div_style =  {"position": "absolute", "bottom": "30px", "right": "60px", "z-index": "1000",
                                             'width':'350px','background-color': 'white','visibility': 'visible','border-radius': '10px','opacity': '0.9','padding':'1px'}
 
-
-
         elif survey_df.loc[survey_df['survey_long_name'] == marker_hover['properties']['name']]['survey_dash_id'].values[0] == 'ard_bay_2022' and  marker_clicks_0 > 0   :
             set_map_view(map_view,'ard_bay_2022',survey_df)
             info_out = write_info_out('ard_bay_2022',survey_df)
@@ -395,14 +337,11 @@ def update_map_and_graphics(map_view,
             time_series_plot_div_style =  {"position": "absolute", "bottom": "30px", "right": "60px", "z-index": "1000",
                                             'width':'350px','background-color': 'white','visibility': 'visible','border-radius': '10px','opacity': '0.9','padding':'1px'}
 
-
-
         elif(survey_df.loc[survey_df['survey_long_name'] == marker_hover['properties']['name']]['survey_dash_id'].values[0] == 'ard_bay_2022' ) and input_id == 'survey_markers_geojson':
             info_out = write_info_out('ard_bay_2022',survey_df)
             info_style= {'display': 'block'}
             time_series_plot_div_style =  {"position": "absolute", "bottom": "30px", "right": "60px", "z-index": "1000",
                                             'width':'350px','background-color': 'white','visibility': 'visible','border-radius': '10px','opacity': '0.9','padding':'1px'}
-
 
         elif survey_df.loc[survey_df['survey_long_name'] == marker_hover['properties']['name']]['survey_dash_id'].values[0] == 'creran_2023'  and  marker_clicks_0 > 0   :
             set_map_view(map_view,'creran_2023',survey_df)
@@ -421,7 +360,6 @@ def update_map_and_graphics(map_view,
                 info_out = write_info_out('creran_T1_15_03_2023',survey_df)
                 info_style= {'display': 'block'}
 
-
         elif survey_df.loc[survey_df['survey_long_name'] == marker_hover['properties']['name']]['survey_dash_id'].values[0] == 'CentralCreagan_HorseMussels_2023'  and  marker_clicks_0 > 0   :
             set_map_view(map_view,'CentralCreagan_HorseMussels_2023',survey_df)
             info_out = write_info_out('',survey_df)
@@ -438,7 +376,6 @@ def update_map_and_graphics(map_view,
                 info_out = write_info_out('Creagan_Bridge_HorseMussels_2023',survey_df)
                 info_style= {'display': 'block'}
 
-
         elif survey_df.loc[survey_df['survey_long_name'] == marker_hover['properties']['name']]['survey_dash_id'].values[0] == 'BN17'  and  marker_clicks_0 > 0   :
             set_map_view(map_view,'BN17',survey_df)
             info_out = write_info_out('',survey_df)
@@ -446,8 +383,6 @@ def update_map_and_graphics(map_view,
         elif(survey_df.loc[survey_df['survey_long_name'] == marker_hover['properties']['name']]['survey_dash_id'].values[0] == 'BN17' ) and input_id == 'survey_markers_geojson':
                 info_out = write_info_out('BN17',survey_df)
                 info_style= {'display': 'block'}
-
-
 
         elif survey_df.loc[survey_df['survey_long_name'] == marker_hover['properties']['name']]['survey_dash_id'].values[0] == 'BN18'  and  marker_clicks_0 > 0   :
             set_map_view(map_view,'BN18',survey_df)
@@ -457,7 +392,6 @@ def update_map_and_graphics(map_view,
                 info_out = write_info_out('BN18',survey_df)
                 info_style= {'display': 'block'}
 
-
         elif survey_df.loc[survey_df['survey_long_name'] == marker_hover['properties']['name']]['survey_dash_id'].values[0] == 'BN19'  and  marker_clicks_0 > 0   :
             set_map_view(map_view,'BN19',survey_df)
             info_out = write_info_out('',survey_df)
@@ -466,21 +400,13 @@ def update_map_and_graphics(map_view,
                 info_out = write_info_out('BN19',survey_df)
                 info_style= {'display': 'block'}
 
-
     else:
             info_out = write_info_out('',survey_df)
             info_style = {'display': 'none'}
             time_series_plot_div_style =  {"position": "absolute", "bottom": "30px", "right": "60px", "z-index": "1000",
                                             'width':'350px','background-color': 'white','visibility': 'hidden','border-radius': '10px','opacity': '0.9','padding':'1px'}
 
-
-
     return   intermediate_mapview, map_view,map_children_out, info_out, info_style,info_aggregate_out, info_aggregate_style, intermediate_marker_hover , survery_marker_data , time_series_plot_div_style
-
-
-
-
-
 
 if __name__ == '__main__':
     app.run_server(debug=True,port=8052)
